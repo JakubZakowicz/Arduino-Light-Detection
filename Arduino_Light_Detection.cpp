@@ -41,13 +41,11 @@ enum SettingTimeActions {
 };
 
 Modes mode = MAIN_MENU;
-
 SettingTimeUnits settingTimeUnit = HOURS;
 
+bool lightDetectionSet = false;
 int sensor;
 const int threshold = 500;
-
-bool isSetAlarmOpen = false;
 
 void setup() {
   pinMode(buzzer, OUTPUT);
@@ -61,17 +59,20 @@ void setup() {
 }
 
 void loop() {
-  sensor = analogRead(sensorPin);
-  // Serial.println(sensor);
-  if(sensor > threshold){
-  	digitalWrite(buzzer, HIGH);
-  } else {
-  	digitalWrite(buzzer, LOW);
-  }
-  
-  handleSetAlarm();
-  
+  if (mode == MAIN_MENU) handleMainMenu();
+  if (mode == ALARM_SETTING) handleSetAlarm();
+  if (mode == LIGHT_INTENSITY_SETTING) handleSetLightIntensity()
+
   if (alarmSet) checkAlarmTime();
+  if (lightDetectionSet) checkLightIntensity();
+}
+
+void handleMainMenu () {
+  if (buttonRead(button1)) {
+    mode = ALARM_SETTING;
+    resetSettingTime();
+    displaySetAlarm();
+  }
 }
 
 void displayMainMenu () {
@@ -81,95 +82,78 @@ void displayMainMenu () {
   lcd.print("2.Set light intensity");
 }
 
-void handleSetAlarm () {
-  if (mode == MAIN_MENU) {
+void handleSetAlarm () {  
+  switch (settingTimeUnit) {
+    case HOURS:
+      if (buttonRead(button1)) {
+        settingTimeUnit = MINUTES;
+        displaySetAlarm();
+      }
+
+      if (buttonRead(button2)) {
+        settingTimeUnit = HOURS;
+        mode = MAIN_MENU;
+        displayMainMenu();
+      }
+
+      if (buttonRead(button3)) {
+        executeTimeAction(HOURS, INCREMENT);
+        displaySetAlarm();
+      }
+
+      if (buttonRead(button4)) {
+        executeTimeAction(HOURS, DECREMENT);
+        displaySetAlarm();
+      }
+
+      break;
+    case MINUTES:
+      if (buttonRead(button1)) {
+        settingTimeUnit = SECONDS;
+        displaySetAlarm();
+      }
+
+      if (buttonRead(button2)) {
+        settingTimeUnit = HOURS;
+        displaySetAlarm();
+      }
+
+      if (buttonRead(button3)) {
+        executeTimeAction(MINUTES, INCREMENT);
+        displaySetAlarm();
+      }
+
+      if (buttonRead(button4)) {
+        executeTimeAction(MINUTES, DECREMENT);
+        displaySetAlarm();
+      }
     
-    if (buttonRead(button1)) {
-      mode = ALARM_SETTING;
-      resetSettingTime();
-      displaySetAlarm();
-    }
-  }
-  
-  if (mode == ALARM_SETTING) {
-    switch (settingTimeUnit) {
-      case HOURS:
-      	if (buttonRead(button1)) {
-          settingTimeUnit = MINUTES;
-          displaySetAlarm();
-        }
-      
-      	if (buttonRead(button2)) {
-          settingTimeUnit = HOURS;
-          mode = MAIN_MENU;
-          displayMainMenu();
-        }
-      
-        if (buttonRead(button3)) {
-          executeTimeAction(HOURS, INCREMENT);
-          displaySetAlarm();
-          return;
-        }
+      break;
+    case SECONDS:
+      if (buttonRead(button1)) {
+        setAlarm();
+        settingTimeUnit = HOURS;
+        mode = MAIN_MENU;
+        displayMainMenu();
+      }
 
-        if (buttonRead(button4)) {
-          executeTimeAction(HOURS, DECREMENT);
-          displaySetAlarm();
-          return;
-        }
-      
-      	break;
-      case MINUTES:
-       	if (buttonRead(button1)) {
-          settingTimeUnit = SECONDS;
-          displaySetAlarm();
-        }
-      
-        if (buttonRead(button2)) {
-          settingTimeUnit = HOURS;
-          displaySetAlarm();
-        }
-      
-      	if (buttonRead(button3)) {
-          executeTimeAction(MINUTES, INCREMENT);
-          displaySetAlarm();
-          return;
-        }
+      if (buttonRead(button2)) {
+        settingTimeUnit = MINUTES;
+        displaySetAlarm();
+      }
 
-        if (buttonRead(button4)) {
-          executeTimeAction(MINUTES, DECREMENT);
-          displaySetAlarm();
-          return;
-        }
-      
-      	break;
-      case SECONDS:
-      	if (buttonRead(button1)) {
-          setAlarm();
-          settingTimeUnit = HOURS;
-          mode = MAIN_MENU;
-          displayMainMenu();
-        }
-      
-        if (buttonRead(button2)) {
-          settingTimeUnit = MINUTES;
-          displaySetAlarm();
-        }
-      
-      	if (buttonRead(button3)) {
-          executeTimeAction(SECONDS, INCREMENT);
-          displaySetAlarm();
-          return;
-        }
+      if (buttonRead(button3)) {
+        executeTimeAction(SECONDS, INCREMENT);
+        displaySetAlarm();
+      }
 
-        if (buttonRead(button4)) {
-          executeTimeAction(SECONDS, DECREMENT);
-          displaySetAlarm();
-          return;
-        }
+      if (buttonRead(button4)) {
+        executeTimeAction(SECONDS, DECREMENT);
+        displaySetAlarm();
+      }
 
-      	break;
+      break;
     }   
-  }
 }
 
 void displaySetAlarm () {
@@ -280,10 +264,27 @@ void setAlarm () {
   alarmSeconds = settingSeconds;
 }
 
+void handleSetLightIntensity {
+  // continue here
+}
+
+void displaySetLightIntensity () {
+}
+
 void checkAlarmTime () {
   if (alarmHours == 7 && alarmMinutes == 0 
       && alarmSeconds == 0) {
   	digitalWrite(buzzer, HIGH);
+    tone(buzzer, 2000, 10);
+  }
+}
+
+void checkLightIntensity () {
+  sensor = analogRead(sensorPin);
+  if(sensor > threshold){
+  	digitalWrite(buzzer, HIGH);
+  } else {
+  	digitalWrite(buzzer, LOW);
   }
 }
 
