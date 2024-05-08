@@ -14,14 +14,19 @@ const int button4 = 10;
 const int debounceDelay = 150;
 int lastDebounceTime = 0;
 
-int hours = 0;
-int minutes = 0;
-int seconds = 0;
+bool alarmSet = false;
+int alarmHours;
+int alarmMinutes;
+int alarmSeconds;
+
+int settingHours = 0;
+int settingMinutes = 0;
+int settingSeconds = 0;
 
 enum Modes {
-	MAIN_MENU = 0,
-  	ALARM_SETTING = 1,
-  	LIGHT_INTENSITY_SETTING = 2
+  MAIN_MENU = 0,
+  ALARM_SETTING = 1,
+  LIGHT_INTENSITY_SETTING = 2
 };
 
 enum SettingTimeUnits {
@@ -65,6 +70,8 @@ void loop() {
   }
   
   handleSetAlarm();
+  
+  if (alarmSet) checkAlarmTime();
 }
 
 void displayMainMenu () {
@@ -79,7 +86,7 @@ void handleSetAlarm () {
     
     if (buttonRead(button1)) {
       mode = ALARM_SETTING;
-      resetTime();
+      resetSettingTime();
       displaySetAlarm();
     }
   }
@@ -87,6 +94,17 @@ void handleSetAlarm () {
   if (mode == ALARM_SETTING) {
     switch (settingTimeUnit) {
       case HOURS:
+      	if (buttonRead(button1)) {
+          settingTimeUnit = MINUTES;
+          displaySetAlarm();
+        }
+      
+      	if (buttonRead(button2)) {
+          settingTimeUnit = HOURS;
+          mode = MAIN_MENU;
+          displayMainMenu();
+        }
+      
         if (buttonRead(button3)) {
           executeTimeAction(HOURS, INCREMENT);
           displaySetAlarm();
@@ -98,12 +116,19 @@ void handleSetAlarm () {
           displaySetAlarm();
           return;
         }
-
-        if (buttonRead(button1)) {
-          settingTimeUnit = MINUTES;
-        }
+      
       	break;
       case MINUTES:
+       	if (buttonRead(button1)) {
+          settingTimeUnit = SECONDS;
+          displaySetAlarm();
+        }
+      
+        if (buttonRead(button2)) {
+          settingTimeUnit = HOURS;
+          displaySetAlarm();
+        }
+      
       	if (buttonRead(button3)) {
           executeTimeAction(MINUTES, INCREMENT);
           displaySetAlarm();
@@ -115,12 +140,21 @@ void handleSetAlarm () {
           displaySetAlarm();
           return;
         }
-
-        if (buttonRead(button1)) {
-          settingTimeUnit = SECONDS;
-        }
+      
       	break;
       case SECONDS:
+      	if (buttonRead(button1)) {
+          setAlarm();
+          settingTimeUnit = HOURS;
+          mode = MAIN_MENU;
+          displayMainMenu();
+        }
+      
+        if (buttonRead(button2)) {
+          settingTimeUnit = MINUTES;
+          displaySetAlarm();
+        }
+      
       	if (buttonRead(button3)) {
           executeTimeAction(SECONDS, INCREMENT);
           displaySetAlarm();
@@ -133,11 +167,6 @@ void handleSetAlarm () {
           return;
         }
 
-        if (buttonRead(button1)) {
-          settingTimeUnit = HOURS;
-          mode = MAIN_MENU;
-          displayMainMenu();
-        }
       	break;
     }   
   }
@@ -147,88 +176,115 @@ void displaySetAlarm () {
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Set alarm time:");
+  
+  switch (settingTimeUnit) {
+  	case HOURS:
+      lcd.print("h");
+      break;
+    case MINUTES:
+      lcd.print("m");
+      break;
+    case SECONDS:
+      lcd.print("s");
+      break;
+  }
+  
   lcd.setCursor(0, 1);
   displayTime();
 }
 
 void displayTime () {
-  if (hours <= 9){
+  if (settingHours <= 9){
   	lcd.print("0");
   }
   
-  lcd.print(hours);
+  lcd.print(settingHours);
   lcd.print(":");
   
-  if (minutes <= 9){
+  if (settingMinutes <= 9){
   	lcd.print("0");
   }
   
-  lcd.print(minutes);
+  lcd.print(settingMinutes);
   lcd.print(":");
   
-  if (seconds <= 9){
+  if (settingSeconds <= 9){
   	lcd.print("0");
   }
-    lcd.print(seconds);
+    lcd.print(settingSeconds);
 }
 
 void executeTimeAction (int unit, int action) {
   switch (unit) {
     case HOURS:
       if (action == INCREMENT) {
-        if (hours == 24) {
-          hours = 0;
+        if (settingHours == 24) {
+          settingHours = 0;
         } else {
-          hours++;
+          settingHours++;
         }
       } else {
-        if (hours == 0)
+        if (settingHours == 0)
         {
-          hours = 24;
+          settingHours = 24;
         } else {
-          hours--;
+          settingHours--;
         }
       }
       break;
     case MINUTES:
       if (action == INCREMENT) {
-        if (minutes == 60) {
-          minutes = 0;
+        if (settingMinutes == 60) {
+          settingMinutes = 0;
         } else {
-          minutes++;
+          settingMinutes++;
         }
       } else {
-        if (minutes == 0)
+        if (settingMinutes == 0)
         {
-          minutes = 60;
+          settingMinutes = 60;
         } else {
-          minutes--;
+          settingMinutes--;
         }
       }
       break;
     case SECONDS:
       if (action == INCREMENT) {
-        if (seconds == 60) {
-          seconds = 0;
+        if (settingSeconds == 60) {
+          settingSeconds = 0;
         } else {
-          seconds++;
+          settingSeconds++;
         }
       } else {
-        if (seconds == 0)
+        if (settingSeconds == 0)
         {
-          seconds = 60;
+          settingSeconds = 60;
         } else {
-          seconds--;
+          settingSeconds--;
         }
       }
       break;
   }
 }
 
-void resetTime () {
-  hours = 0;
-  minutes = 0;
-  seconds = 0;
+void resetSettingTime () {
+  settingHours = 0;
+  settingMinutes = 0;
+  settingSeconds = 0;
+}
+
+void setAlarm () {
+  alarmSet = true;
+  alarmHours = settingHours;
+  alarmMinutes = settingMinutes;
+  alarmSeconds = settingSeconds;
+}
+
+void checkAlarmTime () {
+  if (alarmHours == 7 && alarmMinutes == 0 
+      && alarmSeconds == 0) {
+  	digitalWrite(buzzer, HIGH);
+  }
 }
 
 bool buttonRead (int buttonPin) {
