@@ -35,7 +35,7 @@ enum SettingTimeUnits {
   SECONDS = 2
 };
 
-enum SettingTimeActions {
+enum SettingActions {
   INCREMENT = 0,
   DECREMENT = 1
 };
@@ -45,7 +45,8 @@ SettingTimeUnits settingTimeUnit = HOURS;
 
 bool lightDetectionSet = false;
 int sensor;
-const int threshold = 500;
+int alarmLightIntensity;
+int settingLightIntensity = 50;
 
 void setup() {
   pinMode(buzzer, OUTPUT);
@@ -61,8 +62,8 @@ void setup() {
 void loop() {
   if (mode == MAIN_MENU) handleMainMenu();
   if (mode == ALARM_SETTING) handleSetAlarm();
-  if (mode == LIGHT_INTENSITY_SETTING) handleSetLightIntensity()
-
+  if (mode == LIGHT_INTENSITY_SETTING) handleSetLightIntensity();
+  
   if (alarmSet) checkAlarmTime();
   if (lightDetectionSet) checkLightIntensity();
 }
@@ -72,6 +73,12 @@ void handleMainMenu () {
     mode = ALARM_SETTING;
     resetSettingTime();
     displaySetAlarm();
+  }
+  
+  if (buttonRead(button2)) {
+    mode = LIGHT_INTENSITY_SETTING;
+    settingLightIntensity = 50;
+  	displaySetLightIntensity();
   }
 }
 
@@ -264,24 +271,76 @@ void setAlarm () {
   alarmSeconds = settingSeconds;
 }
 
-void handleSetLightIntensity {
-  // continue here
+void handleSetLightIntensity () {
+  if (buttonRead(button1)) {
+    setLightIntensityAlarm();
+  	mode = MAIN_MENU;
+    displayMainMenu();
+  }
+  
+  if (buttonRead(button2)) {
+    mode = MAIN_MENU;
+    displayMainMenu();
+  }
+  
+  if (buttonRead(button3)) {
+    executeLightIntensityAction(INCREMENT);
+    displaySetLightIntensity();
+  }
+  
+  if (buttonRead(button4)) {
+  	executeLightIntensityAction(DECREMENT);
+    displaySetLightIntensity();
+  }
 }
 
 void displaySetLightIntensity () {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Set Light intensity:");
+  lcd.setCursor(6, 1);
+  
+  if (settingLightIntensity < 10) {
+    lcd.print("0");
+    lcd.print(settingLightIntensity);
+  } else {
+  	lcd.print(settingLightIntensity);
+  }
+  
+  lcd.print("%");
+}
+
+void executeLightIntensityAction (int action) {
+  if (action == INCREMENT) {
+  	if (settingLightIntensity == 100) {
+      settingLightIntensity = 0;
+    } else {
+      settingLightIntensity++;
+    }
+  } else {
+    if (settingLightIntensity == 0) {
+      settingLightIntensity = 100;
+    } else {
+      settingLightIntensity--;
+    } 
+  }
+}
+
+void setLightIntensityAlarm () {
+  lightDetectionSet = true;
+  alarmLightIntensity = settingLightIntensity * 6.8;
 }
 
 void checkAlarmTime () {
   if (alarmHours == 7 && alarmMinutes == 0 
       && alarmSeconds == 0) {
   	digitalWrite(buzzer, HIGH);
-    tone(buzzer, 2000, 10);
   }
 }
 
 void checkLightIntensity () {
   sensor = analogRead(sensorPin);
-  if(sensor > threshold){
+  if(sensor > alarmLightIntensity){
   	digitalWrite(buzzer, HIGH);
   } else {
   	digitalWrite(buzzer, LOW);
