@@ -11,7 +11,7 @@ const int button2 = 7;
 const int button3 = 9;
 const int button4 = 10;
 
-const int debounceDelay = 150;
+const int debounceDelay = 200;
 int lastDebounceTime = 0;
 
 bool alarmSet = false;
@@ -24,9 +24,11 @@ int settingMinutes = 0;
 int settingSeconds = 0;
 
 enum Modes {
-  MAIN_MENU = 0,
-  ALARM_SETTING = 1,
-  LIGHT_INTENSITY_SETTING = 2
+  MEASUREMENTS = 0,
+  ALARMS = 1,
+  MAIN_MENU = 2,
+  ALARM_SETTING = 3,
+  LIGHT_INTENSITY_SETTING = 4
 };
 
 enum SettingTimeUnits {
@@ -40,7 +42,7 @@ enum SettingActions {
   DECREMENT = 1
 };
 
-Modes mode = MAIN_MENU;
+Modes mode = MEASUREMENTS;
 SettingTimeUnits settingTimeUnit = HOURS;
 
 bool lightDetectionSet = false;
@@ -56,10 +58,12 @@ void setup() {
   pinMode(button4, INPUT);
   Serial.begin(9600);
   lcd.begin(16, 2);
-  displayMainMenu();
+  displayMeasurements();
 }
 
 void loop() {
+  if (mode == MEASUREMENTS) handleMeasurements();
+  if (mode == ALARMS) handleAlarms();
   if (mode == MAIN_MENU) handleMainMenu();
   if (mode == ALARM_SETTING) handleSetAlarm();
   if (mode == LIGHT_INTENSITY_SETTING) handleSetLightIntensity();
@@ -68,14 +72,103 @@ void loop() {
   if (lightDetectionSet) checkLightIntensity();
 }
 
+void handleMeasurements () {
+   if (buttonRead(button1)) {
+  	mode = MAIN_MENU;
+    displayMainMenu();
+  }
+  
+  if (buttonRead(button2)) {
+  	mode = ALARMS;
+    displayAlarms();
+  }
+}
+
+void displayMeasurements () {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Time: 12:45:00");
+  lcd.setCursor(0, 1);
+  lcd.print("Light: 60%");
+}
+
+void handleAlarms () {
+  if (buttonRead(button1)) {
+  	mode = MEASUREMENTS;
+    displayMeasurements();
+  }
+ 
+  if (buttonRead(button2)) {
+  	mode = MAIN_MENU;
+    displayMainMenu();
+  }
+  
+  if (buttonRead(button3)) {
+    if (alarmSet) {
+      removeTimeAlarm();
+      displayAlarms();
+    }
+  }
+  
+  if (buttonRead(button4)) {
+    if (lightDetectionSet) {
+      removeLightAlarm();
+      displayAlarms();
+    }
+  }
+}
+
+void displayAlarms () {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Alarm: ");
+  if (alarmSet) {
+  	displayTime(alarmHours, alarmMinutes, alarmSeconds);
+  } else {
+  	lcd.print("NOT SET");
+  }
+  lcd.setCursor(0, 1);
+  lcd.print("Light Alarm: ");
+  if (lightDetectionSet) {
+  	lcd.print(alarmLightIntensity);
+    lcd.print("%");
+  } else {
+  	lcd.print("NS");
+  }
+}
+
+void removeTimeAlarm () {
+  // continue here
+  alarmSet = false;
+  alarmHours = NULL;
+  alarmMinutes = NULL;
+  alarmSeconds = NULL;
+}
+
+void removeLightAlarm() {
+  // continue here
+  lightDetectionSet = false;
+  alarmLightIntensity = NULL;
+}
+
 void handleMainMenu () {
   if (buttonRead(button1)) {
+  	mode = ALARMS;
+    displayAlarms();
+  }
+ 
+   if (buttonRead(button2)) {
+  	mode = MEASUREMENTS;
+    displayMeasurements();
+  }
+  
+  if (buttonRead(button3)) {
     mode = ALARM_SETTING;
     resetSettingTime();
     displaySetAlarm();
   }
   
-  if (buttonRead(button2)) {
+  if (buttonRead(button4)) {
     mode = LIGHT_INTENSITY_SETTING;
     settingLightIntensity = 50;
   	displaySetLightIntensity();
@@ -84,9 +177,9 @@ void handleMainMenu () {
 
 void displayMainMenu () {
   lcd.clear();
-  lcd.print("1.Set Alarm Time");
+  lcd.print("1.Set Alarm");
   lcd.setCursor(0, 1);
-  lcd.print("2.Set light intensity");
+  lcd.print("2.Set light");
 }
 
 void handleSetAlarm () {  
@@ -181,28 +274,28 @@ void displaySetAlarm () {
   }
   
   lcd.setCursor(0, 1);
-  displayTime();
+  displayTime(settingHours, settingMinutes, settingSeconds);
 }
 
-void displayTime () {
-  if (settingHours <= 9){
+void displayTime (int hours, int minutes, int seconds) {
+  if (hours <= 9){
   	lcd.print("0");
   }
   
-  lcd.print(settingHours);
+  lcd.print(hours);
   lcd.print(":");
   
-  if (settingMinutes <= 9){
+  if (minutes <= 9){
   	lcd.print("0");
   }
   
-  lcd.print(settingMinutes);
+  lcd.print(minutes);
   lcd.print(":");
   
-  if (settingSeconds <= 9){
+  if (seconds <= 9){
   	lcd.print("0");
   }
-    lcd.print(settingSeconds);
+    lcd.print(seconds);
 }
 
 void executeTimeAction (int unit, int action) {
@@ -299,14 +392,16 @@ void displaySetLightIntensity () {
   lcd.setCursor(0, 0);
   lcd.print("Set Light intensity:");
   lcd.setCursor(6, 1);
-  
-  if (settingLightIntensity < 10) {
+  displayLightIntensity();
+}
+
+void displayLightIntensity () {
+   if (settingLightIntensity < 10) {
     lcd.print("0");
     lcd.print(settingLightIntensity);
   } else {
   	lcd.print(settingLightIntensity);
   }
-  
   lcd.print("%");
 }
 
@@ -328,7 +423,7 @@ void executeLightIntensityAction (int action) {
 
 void setLightIntensityAlarm () {
   lightDetectionSet = true;
-  alarmLightIntensity = settingLightIntensity * 6.8;
+  alarmLightIntensity = settingLightIntensity;
 }
 
 void checkAlarmTime () {
@@ -340,7 +435,7 @@ void checkAlarmTime () {
 
 void checkLightIntensity () {
   sensor = analogRead(sensorPin);
-  if(sensor > alarmLightIntensity){
+  if(sensor > alarmLightIntensity * 6.8){
   	digitalWrite(buzzer, HIGH);
   } else {
   	digitalWrite(buzzer, LOW);
